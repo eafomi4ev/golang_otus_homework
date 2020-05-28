@@ -16,6 +16,6 @@ func main() {
 		log.Fatalf("%s", err)
 	}
 
-	fmt.Println("current time:", currentTime.Round(time.Second))
-	fmt.Println("exact time:", exactTime.Round(time.Second))
+	fmt.Println("current time:", currentTime.Round(0))
+	fmt.Println("exact time:", exactTime.Round(0))
 }
