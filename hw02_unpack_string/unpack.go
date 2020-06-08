@@ -9,6 +9,19 @@ import (
 
 var ErrInvalidString = errors.New("invalid string")
 
+func parseDigitRune(r rune) (int, error) {
+	stringRepresentation := string(r)
+	return strconv.Atoi(stringRepresentation)
+}
+
+func reverse(s string) string {
+	runes := []rune(s)
+	for i, j := 0, len(runes)-1; i < j; i, j = i+1, j-1 {
+		runes[i], runes[j] = runes[j], runes[i]
+	}
+	return string(runes)
+}
+
 func Unpack(str string) (string, error) {
 	runes := []rune(str)
 
@@ -22,34 +35,35 @@ func Unpack(str string) (string, error) {
 
 	var builder strings.Builder
 	var char string
-	for i := 0; i < len(runes)-1; i++ {
+	count := -1
+
+	for i := len(runes) - 1; i >= 0; i-- {
 		if unicode.IsDigit(runes[i]) {
-			if unicode.IsDigit(runes[i+1]) {
+			if count != -1 {
 				return "", ErrInvalidString
 			}
+
+			count, _ = parseDigitRune(runes[i])
+			continue
+		}
+
+		if count == 0 {
+			count = -1
 			continue
 		}
 
 		char = string(runes[i])
 
-		if unicode.IsDigit(runes[i+1]) {
-
-			countStr := string(runes[i+1])
-			count, _ := strconv.Atoi(countStr)
-
-			if count != 0 {
-				builder.WriteString(strings.Repeat(char, count))
-			}
-		} else {
+		if count == -1 {
 			builder.WriteString(char)
+		} else {
+			tmp := strings.Repeat(char, count)
+			builder.WriteString(tmp)
+			count = -1
 		}
 	}
 
-	indexOfLastRune := len(runes) - 1
-	if unicode.IsDigit(runes[indexOfLastRune]) == false {
-		char = string(runes[indexOfLastRune])
-		builder.WriteString(char)
-	}
+	result := reverse(builder.String())
 
-	return builder.String(), nil
+	return result, nil
 }
