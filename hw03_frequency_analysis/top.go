@@ -23,13 +23,11 @@ func calculateWordsFrequency(words []string) map[string]int {
 }
 
 func splitMapToKeyValueSlice(wordsAndFrequencyMap map[string]int) []wordFrequency {
-	result := make([]wordFrequency, len(wordsAndFrequencyMap))
+	result := make([]wordFrequency, 0, len(wordsAndFrequencyMap))
 
-	var i int
 	for key, value := range wordsAndFrequencyMap {
 		item := wordFrequency{key, value}
-		result[i] = item
-		i++
+		result = append(result, item)
 	}
 
 	return result
@@ -45,11 +43,9 @@ func Top10(initialText string) []string {
 		return wordFrequencySlice[i].frequency > wordFrequencySlice[j].frequency
 	})
 
-	var count int
+	count := targetWordsCount
 	if len(wordFrequencySlice) < targetWordsCount {
 		count = len(wordFrequencySlice)
-	} else {
-		count = targetWordsCount
 	}
 
 	mostFrequencyWords := make([]string, count)
