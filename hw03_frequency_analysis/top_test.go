@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // Change to true if needed
@@ -56,5 +57,53 @@ func TestTop10(t *testing.T) {
 			expected := []string{"он", "и", "а", "что", "ты", "не", "если", "-", "то", "Кристофер"}
 			assert.ElementsMatch(t, expected, Top10(text))
 		}
+	})
+
+	t.Run("less than 10 words in text", func(t *testing.T) {
+		localText := "2words 2words 3words 3words 3words"
+		expected := []string{"2words", "3words"}
+		require.Subset(t, expected, Top10(localText))
+	})
+
+	t.Run("more than 10 words with the same frequent", func(t *testing.T) {
+		localText := `
+1 1 1 1 1 1 1 1 1 1 1 
+2 2 2 2 2 2 2 2 2 2 2
+3 3 3 3 3 3 3 3 3 3 3
+4 4 4 4 4 4 4 4 4 4 4
+5 5 5 5 5 5 5 5 5 5 5
+6 6 6 6 6 6 6 6 6 6 6
+7 7 7 7 7 7 7 7 7 7 7
+8 8 8 8 8 8 8 8 8 8 8
+9 9 9 9 9 9 9 9 9 9 9
+0 0 0 0 0 0 0 0 0 0 0
+a a a a a a a a a a a
+b b b b b b b b b b b
+c c c c c c c c c c c
+`
+		expected := []string{"1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "a", "b", "c"}
+		result := Top10(localText)
+		require.Subset(t, expected, result)
+	})
+
+	t.Run("return only 10 items in slice", func(t *testing.T) {
+		localText := `
+1 1 1 1 1 1 1 1 1 1 1 
+2 2 2 2 2 2 2 2 2 2 2
+3 3 3 3 3 3 3 3 3 3 3
+4 4 4 4 4 4 4 4 4 4 4
+5 5 5 5 5 5 5 5 5 5 5
+6 6 6 6 6 6 6 6 6 6 6
+7 7 7 7 7 7 7 7 7 7 7
+8 8 8 8 8 8 8 8 8 8 8
+9 9 9 9 9 9 9 9 9 9 9
+0 0 0 0 0 0 0 0 0 0 0
+a a a a a a a a a a a
+b b b b b b b b b b b
+c c c c c c c c c c c
+`
+		expected := 10
+		result := Top10(localText)
+		require.Equal(t, expected, len(result))
 	})
 }
