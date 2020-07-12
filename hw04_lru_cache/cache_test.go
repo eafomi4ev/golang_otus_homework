@@ -49,8 +49,40 @@ func TestCache(t *testing.T) {
 		require.Nil(t, val)
 	})
 
-	t.Run("purge logic", func(t *testing.T) {
-		// Write me
+	t.Run("check that first element is removed on attempt to overload queue", func(t *testing.T) {
+		c := NewCache(3)
+
+		c.Set("one", 1)
+		c.Set("two", 2)
+		c.Set("three", 3)
+		c.Set("four", 4)
+
+		_, ok := c.Get("one")
+
+		require.False(t, ok)
+	})
+
+	t.Run("trying to overload cache and check that the most rarely element is removed after attempt to overload cache", func(t *testing.T) {
+		c := NewCache(3)
+
+		c.Set("one", 1)
+		c.Set("two", 2)
+		c.Set("three", 3)
+
+		_, ok := c.Get("one")
+		require.True(t, ok)
+		_, ok = c.Get("two")
+		require.True(t, ok)
+		_, ok = c.Get("two")
+		require.True(t, ok)
+		_, ok = c.Get("one")
+		require.True(t, ok)
+
+		c.Set("four", 4)
+
+		_, ok = c.Get("three")
+
+		require.False(t, ok)
 	})
 }
 
@@ -64,14 +96,14 @@ func TestCacheMultithreading(t *testing.T) {
 	go func() {
 		defer wg.Done()
 		for i := 0; i < 1_000_000; i++ {
-			c.Set(Key(strconv.Itoa(i)), i)
+			c.Set(strconv.Itoa(i), i)
 		}
 	}()
 
 	go func() {
 		defer wg.Done()
 		for i := 0; i < 1_000_000; i++ {
-			c.Get(Key(strconv.Itoa(rand.Intn(1_000_000))))
+			c.Get(strconv.Itoa(rand.Intn(1_000_000)))
 		}
 	}()
 
