@@ -1,78 +1,81 @@
 package hw04_lru_cache //nolint:golint,stylecheck
+import "sync"
 
 type Key string
 
 type Cache interface {
-	Set(key string, value interface{}) bool // Добавить значение в кэш по ключу
-	Get(key string) (interface{}, bool)     // Получить значение из кэша по ключу
-	Clear()                                 // Очистить кэш
+	Set(key Key, value interface{}) bool // Добавить значение в кэш по ключу
+	Get(key Key) (interface{}, bool)     // Получить значение из кэша по ключу
+	Clear()                              // Очистить кэш
+}
 
+type cacheItem struct {
+	key   Key
+	value interface{}
 }
 
 type lruCache struct {
 	capacity int
-	queue    list
-	items    map[string]*cacheItem
+	queue    List
+	m        sync.Mutex
+	cache    map[Key]*Item
 }
 
-func (l *lruCache) Set(key string, value interface{}) bool {
-	item, ok := l.items[key]
+func (l *lruCache) Set(key Key, value interface{}) bool {
+	l.m.Lock()
+	defer l.m.Unlock()
+
+	item, ok := l.cache[key]
 
 	if ok {
-		l.queue.MoveToFront(item.value)
-		item.value = l.queue.Front()
-		item.value.Value = value
+		l.queue.MoveToFront(item)
+		item.Value.(*cacheItem).value = value
 	} else {
 		if l.queue.Len() == l.capacity {
-			for cacheItemKey, cacheItemValue := range l.items {
-				if cacheItemValue.value.Value == l.queue.Back().Value {
-					delete(l.items, cacheItemKey)
-					l.queue.Remove(l.queue.Back())
-					break
-				}
-			}
+			lastQueueEl := l.queue.Back()
+			delete(l.cache, lastQueueEl.Value.(*cacheItem).key)
+			l.queue.Remove(lastQueueEl)
 		}
 
-		newValue := l.queue.PushFront(value)
-		l.items[key] = &cacheItem{
+		newCacheItem := &cacheItem{
 			key:   key,
-			value: newValue,
+			value: value,
 		}
+
+		l.cache[key] = l.queue.PushFront(newCacheItem)
 	}
 
 	return ok
 }
 
-func (l *lruCache) Get(key string) (interface{}, bool) {
-	item, ok := l.items[key]
+func (l *lruCache) Get(key Key) (interface{}, bool) {
+	l.m.Lock()
+	defer l.m.Unlock()
+
+	item, ok := l.cache[key]
 
 	if ok {
-		l.queue.MoveToFront(item.value)
+		l.queue.MoveToFront(item)
+		return item.Value.(*cacheItem).value, true
 	}
 
-	var value interface{}
-	if item != nil {
-		value = item.value.Value
-	}
-
-	return value, ok
+	return nil, false
 }
 
 func (l *lruCache) Clear() {
-	for key, item := range l.items {
-		l.queue.Remove(item.value)
-		delete(l.items, key)
-	}
-}
+	l.m.Lock()
+	defer l.m.Unlock()
 
-type cacheItem struct {
-	key   string
-	value *Item
+	for key, item := range l.cache {
+		l.queue.Remove(item)
+		delete(l.cache, key)
+	}
 }
 
 func NewCache(capacity int) Cache {
 	return &lruCache{
 		capacity: capacity,
-		items:    make(map[string]*cacheItem),
+		queue:    NewList(),
+		cache:    make(map[Key]*Item),
 	}
 }
