@@ -14,7 +14,7 @@ import (
 func TestRun(t *testing.T) {
 	defer goleak.VerifyNone(t)
 
-	t.Run("if were errors in first M tasks, than finished not more N+M tasks", func(t *testing.T) {
+	t.Run("if were errors in first m tasks, than finished not more n+m tasks", func(t *testing.T) {
 		tasksCount := 50
 		tasks := make([]Task, 0, tasksCount)
 
@@ -37,7 +37,7 @@ func TestRun(t *testing.T) {
 		require.LessOrEqual(t, runTasksCount, int32(workersCount+maxErrorsCount), "extra tasks were started")
 	})
 
-	t.Run("if M == 0, do all tasks despite on errors count", func(t *testing.T) {
+	t.Run("if m == 0, do all tasks despite on errors count", func(t *testing.T) {
 		tasksCount := 50
 		tasks := make([]Task, 0, tasksCount)
 
@@ -57,11 +57,11 @@ func TestRun(t *testing.T) {
 		result := Run(tasks, workersCount, maxErrorsCount)
 
 		require.Nil(t, result)
-		require.Equal(t, tasksCount, int(runTasksCount), "Not all tasks have been done")
+		require.Equal(t, tasksCount, int(runTasksCount), "Not all tasks have been done (m=0)")
 	})
 
-	t.Run("if N == 0, no one task should be done", func(t *testing.T) {
-		const tasksCount = 0
+	t.Run("if n == 0, no one task should be done and result should be nil", func(t *testing.T) {
+		tasksCount := 5
 		tasks := make([]Task, 0, tasksCount)
 
 		var runTasksCount int32
@@ -75,12 +75,23 @@ func TestRun(t *testing.T) {
 			})
 		}
 
-		workersCount := 10
-		maxErrorsCount := 0
+		workersCount := 0
+		maxErrorsCount := 3
 		result := Run(tasks, workersCount, maxErrorsCount)
 
 		require.Nil(t, result)
-		require.Equal(t, tasksCount, int(runTasksCount), "Not all tasks have been done")
+		require.Equal(t, 0, int(runTasksCount), "Some task has been done despite on workers count is 0")
+	})
+
+	t.Run("if no one task is presented, result should be nil", func(t *testing.T) {
+		tasksCount := 0
+		tasks := make([]Task, tasksCount)
+
+		workersCount := 5
+		maxErrorsCount := 3
+		result := Run(tasks, workersCount, maxErrorsCount)
+
+		require.Nil(t, result)
 	})
 
 	t.Run("tasks without errors", func(t *testing.T) {
