@@ -8,7 +8,40 @@ type (
 
 type Stage func(in In) (out Out)
 
+func prepareChanelForStage(in In, done In) Out {
+	out := make(Bi)
+
+	go func() {
+		defer func() {
+			close(out)
+		}()
+
+		for {
+			select {
+			case <-done:
+				return
+			case value, ok := <-in:
+				if !ok {
+					return
+				}
+				select {
+				case <-done:
+					return
+				case out <- value:
+				}
+			}
+		}
+	}()
+
+	return out
+}
+
 func ExecutePipeline(in In, done In, stages ...Stage) Out {
-	// Place your code here
-	return nil
+	lastChanel := in
+
+	for _, stage := range stages {
+		lastChanel = stage(prepareChanelForStage(lastChanel, done))
+	}
+
+	return lastChanel
 }
