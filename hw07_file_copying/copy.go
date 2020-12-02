@@ -49,7 +49,6 @@ func Copy(fromPath string, toPath string, offset, limit int64) error {
 	}
 
 	fSize := info.Size()
-
 	if offset > fSize {
 		return ErrOffsetExceedsFileSize
 	}
@@ -71,12 +70,9 @@ func Copy(fromPath string, toPath string, offset, limit int64) error {
 	defer fTo.Close()
 
 	bytesCountForCopy := evalBytesCountForCopy(fSize, offset, limit)
-
 	bar := pb.Full.Start64(bytesCountForCopy)
 	fToBarProxy := bar.NewProxyWriter(fTo)
-
 	var totalReadBytes int64 // сколько всего прочитано байт из источниа
-
 	for {
 		n, err := fFrom.Read(buff)
 		if err != nil {
@@ -86,10 +82,7 @@ func Copy(fromPath string, toPath string, offset, limit int64) error {
 
 			return ErrReadFromSourceFile
 		}
-		readBytes := int64(n)
-
-		totalReadBytes += readBytes
-
+		totalReadBytes += int64(n)
 		if totalReadBytes >= bytesCountForCopy {
 			_, _ = fToBarProxy.Write(buff[0 : totalReadBytes-(totalReadBytes-bytesCountForCopy)])
 			break
