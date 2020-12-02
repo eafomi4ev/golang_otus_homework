@@ -11,6 +11,11 @@ import (
 var (
 	ErrUnsupportedFile       = errors.New("unsupported file")
 	ErrOffsetExceedsFileSize = errors.New("offset exceeds file size")
+	ErrOpenSourceFile        = errors.New("source file can't be opened")
+	ErrGetStatOfSourceFile   = errors.New("can not get stat of source file")
+	ErrSeekPosition          = errors.New("can not seek position")
+	ErrCreateFile            = errors.New("can not create target file")
+	ErrReadFromSourceFile    = errors.New("can not read from source file")
 )
 
 const maxChunkSize = 1 * 1024 * 1024 // 1 Mb -> B
@@ -34,13 +39,13 @@ func evalBytesCountForCopy(size int64, offset int64, limit int64) int64 {
 func Copy(fromPath string, toPath string, offset, limit int64) error {
 	fFrom, err := os.Open(fromPath)
 	if err != nil {
-		return err
+		return ErrOpenSourceFile
 	}
 	defer fFrom.Close()
 
 	info, err := os.Stat(fromPath)
 	if err != nil {
-		return err
+		return ErrGetStatOfSourceFile
 	}
 
 	fSize := info.Size()
@@ -56,12 +61,12 @@ func Copy(fromPath string, toPath string, offset, limit int64) error {
 	buff := make([]byte, chunkSize)
 	_, err = fFrom.Seek(offset, io.SeekStart)
 	if err != nil {
-		return err
+		return ErrSeekPosition
 	}
 
 	fTo, err := os.Create(toPath)
 	if err != nil {
-		return err
+		return ErrCreateFile
 	}
 	defer fTo.Close()
 
@@ -75,11 +80,11 @@ func Copy(fromPath string, toPath string, offset, limit int64) error {
 	for {
 		n, err := fFrom.Read(buff)
 		if err != nil {
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				break
 			}
 
-			return err
+			return ErrReadFromSourceFile
 		}
 		readBytes := int64(n)
 
