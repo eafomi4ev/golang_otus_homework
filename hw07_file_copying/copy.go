@@ -50,10 +50,10 @@ func Copy(fromPath string, toPath string, offset, limit int64) error {
 
 	fSize := info.Size()
 	if offset > fSize {
-		return ErrOffsetExceedsFileSize
+		return errors.Wrap(ErrOffsetExceedsFileSize, "")
 	}
 	if fSize == 0 {
-		return ErrUnsupportedFile
+		return errors.Wrap(ErrUnsupportedFile, "")
 	}
 
 	_, err = fFrom.Seek(offset, io.SeekStart)
