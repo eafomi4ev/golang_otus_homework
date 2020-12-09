@@ -1,11 +1,11 @@
 package main
 
 import (
-	"errors"
 	"io"
 	"os"
 
 	"github.com/cheggaaa/pb/v3"
+	"github.com/pkg/errors"
 )
 
 var (
@@ -39,13 +39,13 @@ func evalBytesCountForCopy(size int64, offset int64, limit int64) int64 {
 func Copy(fromPath string, toPath string, offset, limit int64) error {
 	fFrom, err := os.Open(fromPath)
 	if err != nil {
-		return ErrOpenSourceFile
+		return errors.Wrap(ErrOpenSourceFile, err.Error())
 	}
 	defer fFrom.Close()
 
 	info, err := os.Stat(fromPath)
 	if err != nil {
-		return ErrGetStatOfSourceFile
+		return errors.Wrap(ErrGetStatOfSourceFile, err.Error())
 	}
 
 	fSize := info.Size()
@@ -56,38 +56,37 @@ func Copy(fromPath string, toPath string, offset, limit int64) error {
 		return ErrUnsupportedFile
 	}
 
-	chunkSize := min(fSize, maxChunkSize)
-	buff := make([]byte, chunkSize)
 	_, err = fFrom.Seek(offset, io.SeekStart)
 	if err != nil {
-		return ErrSeekPosition
+		return errors.Wrap(ErrSeekPosition, err.Error())
 	}
 
 	fTo, err := os.Create(toPath)
 	if err != nil {
-		return ErrCreateFile
+		return errors.Wrap(ErrCreateFile, err.Error())
 	}
 	defer fTo.Close()
 
 	bytesCountForCopy := evalBytesCountForCopy(fSize, offset, limit)
+	chunkSize := min(bytesCountForCopy, maxChunkSize)
+	var totalReadBytes int64 // сколько всего прочитано байт из источника
+
 	bar := pb.Full.Start64(bytesCountForCopy)
 	fToBarProxy := bar.NewProxyWriter(fTo)
-	var totalReadBytes int64 // сколько всего прочитано байт из источниа
+
 	for {
-		n, err := fFrom.Read(buff)
+		n, err := io.CopyN(fToBarProxy, fFrom, chunkSize)
 		if err != nil {
 			if errors.Is(err, io.EOF) {
 				break
 			}
 
-			return ErrReadFromSourceFile
+			return errors.Wrap(ErrReadFromSourceFile, err.Error())
 		}
-		totalReadBytes += int64(n)
+
+		totalReadBytes += n
 		if totalReadBytes >= bytesCountForCopy {
-			_, _ = fToBarProxy.Write(buff[0 : totalReadBytes-(totalReadBytes-bytesCountForCopy)])
 			break
-		} else {
-			_, _ = fToBarProxy.Write(buff)
 		}
 	}
 
