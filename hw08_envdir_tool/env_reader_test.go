@@ -4,6 +4,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 )
 
@@ -57,14 +58,14 @@ func TestReadDir(t *testing.T) {
 			envs, err := ReadDir("./notExistingDir")
 
 			require.Nil(t, envs)
-			require.IsType(t, new(os.PathError), err)
+			require.IsType(t, new(os.PathError), errors.Cause(err))
 		})
 
 		t.Run("read envs from from dir with '=' in the name", func(t *testing.T) {
 			envs, err := ReadDir("./foo=five")
 
 			require.Nil(t, envs)
-			require.IsType(t, ErrIncorrectFileName, err)
+			require.IsType(t, ErrIncorrectFileName, errors.Cause(err))
 		})
 	})
 }

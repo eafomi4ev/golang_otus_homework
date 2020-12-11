@@ -2,11 +2,12 @@ package main
 
 import (
 	"bufio"
-	"errors"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/pkg/errors"
 )
 
 type Environment map[string]EnvValue
@@ -22,7 +23,7 @@ type EnvValue struct {
 func readFirstLineFromFile(filePath string) (string, error) {
 	f, err := os.Open(filePath)
 	if err != nil {
-		return "", err
+		return "", errors.Wrap(err, "")
 	}
 
 	scanner := bufio.NewScanner(f)
@@ -30,10 +31,10 @@ func readFirstLineFromFile(filePath string) (string, error) {
 	firstLine := scanner.Text()
 
 	if err := scanner.Err(); err != nil {
-		return "", err
+		return "", errors.Wrap(err, "")
 	}
 	if err := f.Close(); err != nil {
-		return "", err
+		return "", errors.Wrap(err, "")
 	}
 
 	return firstLine, nil
@@ -43,12 +44,12 @@ func readFirstLineFromFile(filePath string) (string, error) {
 // Variables represented as files where filename is name of variable, file first line is a value.
 func ReadDir(dir string) (Environment, error) {
 	if strings.Contains(dir, "=") {
-		return nil, ErrIncorrectFileName
+		return nil, errors.Wrap(ErrIncorrectFileName, "")
 	}
 
 	dirContent, err := ioutil.ReadDir(dir)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "")
 	}
 
 	var dirFilesInfo []os.FileInfo
@@ -62,7 +63,7 @@ func ReadDir(dir string) (Environment, error) {
 
 	for _, dirFileInfo := range dirFilesInfo {
 		if dirFileInfo.Size() == 0 {
-			envMap[dirFileInfo.Name()] = EnvValue{NeedRemove: true}
+			envMap[dirFileInfo.Name()] = EnvValue{Value: "", NeedRemove: true}
 			continue
 		}
 
