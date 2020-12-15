@@ -25,6 +25,7 @@ func readFirstLineFromFile(filePath string) (string, error) {
 	if err != nil {
 		return "", errors.Wrap(err, "")
 	}
+	defer f.Close()
 
 	scanner := bufio.NewScanner(f)
 	scanner.Scan()
@@ -43,31 +44,27 @@ func readFirstLineFromFile(filePath string) (string, error) {
 // ReadDir reads a specified directory and returns map of env variables.
 // Variables represented as files where filename is name of variable, file first line is a value.
 func ReadDir(dir string) (Environment, error) {
-	if strings.Contains(dir, "=") {
-		return nil, errors.Wrap(ErrIncorrectFileName, "")
-	}
-
 	dirContent, err := ioutil.ReadDir(dir)
 	if err != nil {
 		return nil, errors.Wrap(err, "")
 	}
 
-	var dirFilesInfo []os.FileInfo
-	for _, item := range dirContent {
-		if !item.IsDir() {
-			dirFilesInfo = append(dirFilesInfo, item)
-		}
-	}
-
 	envMap := make(Environment)
-
-	for _, dirFileInfo := range dirFilesInfo {
-		if dirFileInfo.Size() == 0 {
-			envMap[dirFileInfo.Name()] = EnvValue{Value: "", NeedRemove: true}
+	for _, envFile := range dirContent {
+		if envFile.IsDir() {
 			continue
 		}
 
-		firstLine, err := readFirstLineFromFile(filepath.Join(dir, dirFileInfo.Name()))
+		if strings.Contains(envFile.Name(), "=") {
+			return nil, errors.Wrap(ErrIncorrectFileName, "")
+		}
+
+		if envFile.Size() == 0 {
+			envMap[envFile.Name()] = EnvValue{Value: "", NeedRemove: true}
+			continue
+		}
+
+		firstLine, err := readFirstLineFromFile(filepath.Join(dir, envFile.Name()))
 		if err != nil {
 			return nil, err
 		}
@@ -75,7 +72,7 @@ func ReadDir(dir string) (Environment, error) {
 		firstLine = strings.ReplaceAll(firstLine, "\x00", "\n")
 		firstLine = strings.TrimRight(firstLine, " \t")
 
-		envMap[dirFileInfo.Name()] = EnvValue{Value: firstLine, NeedRemove: false}
+		envMap[envFile.Name()] = EnvValue{Value: firstLine, NeedRemove: false}
 	}
 
 	return envMap, nil

@@ -62,7 +62,11 @@ func TestReadDir(t *testing.T) {
 		})
 
 		t.Run("read envs from from dir with '=' in the name", func(t *testing.T) {
-			envs, err := ReadDir("./foo=five")
+			fileIncorrectName := "./testdata/env/FT=42"
+			os.Create(fileIncorrectName)
+			defer os.Remove(fileIncorrectName)
+
+			envs, err := ReadDir("./testdata/env")
 
 			require.Nil(t, envs)
 			require.IsType(t, ErrIncorrectFileName, errors.Cause(err))
