@@ -1,4 +1,5 @@
 package hw09_struct_validator //nolint:golint,stylecheck
+
 import (
 	"encoding/json"
 	"fmt"
@@ -6,6 +7,18 @@ import (
 	"strconv"
 	"strings"
 )
+
+type IValidationInt interface {
+	Max(max int, value int) bool
+	Min(min int, value int) bool
+	In(values []int, value int) bool
+}
+
+type IValidationString interface {
+	Len(len int, value string) bool
+	Regexp(pattern string, value string) (bool, error)
+	In(values []string, value string) bool
+}
 
 type ValidationError struct {
 	Field string
@@ -46,7 +59,7 @@ func Validate(v interface{}) error {
 		if len(tagValue) == 0 {
 			continue
 		}
-		errorsAccumulator = append(errorsAccumulator, validateVal(tagValue, fieldV, fieldT.Name)...)
+		errorsAccumulator = append(errorsAccumulator, validateValue(tagValue, fieldV, fieldT.Name)...)
 	}
 
 	if len(errorsAccumulator) != 0 {
@@ -56,128 +69,114 @@ func Validate(v interface{}) error {
 	return nil
 }
 
-type IValidator interface {
-	Validate(pattern string, value interface{}) bool
-}
-type SValidator struct {
-}
-
-func validateVal(pattern string, fieldValue reflect.Value, fieldName string) ValidationErrors {
+func validateValue(pattern string, fieldValue reflect.Value, fieldName string) ValidationErrors {
 	patternParts := strings.Split(pattern, "|")
 	errorsAccumulator := ValidationErrors{}
 
 	for _, patternPart := range patternParts {
 		rule := strings.Split(patternPart, ":") // e.g. patternPart == max:25 || in:tomato,omelet
-		ruleName := rule[0]
 
-		switch fieldValue.Kind() {
+		switch fieldValue.Kind() { //nolint:exhaustive
 		case reflect.Slice:
 			for i := 0; i < fieldValue.Len(); i++ {
-				errorsAccumulator = append(errorsAccumulator, validateVal(pattern, fieldValue.Index(i), fieldName)...)
+				errorsAccumulator = append(errorsAccumulator, validateValue(pattern, fieldValue.Index(i), fieldName)...)
 			}
 		case reflect.Int:
-			validator := IntValidator{}
-			value := int(fieldValue.Int())
-
-			switch ruleName {
-			case "min":
-				ruleValue, _ := strconv.Atoi(rule[1])
-				if ok := validator.Min(ruleValue, value); !ok {
-					errorsAccumulator = append(errorsAccumulator, ValidationError{
-						Field: fieldName,
-						Err:   fmt.Errorf("%w. Rule value: %d. Struct value: %d", ErrValidationMin, ruleValue, value),
-					})
-				}
-			case "max":
-				ruleValue, _ := strconv.Atoi(rule[1])
-				if ok := validator.Max(ruleValue, value); !ok {
-					errorsAccumulator = append(errorsAccumulator, ValidationError{
-						Field: fieldName,
-						Err:   fmt.Errorf("%w. Rule value: %d. Struct value: %d", ErrValidationMax, ruleValue, value),
-					})
-				}
-			case "in":
-				var ruleValues []int
-				ruleV := fmt.Sprintf("[%s]", rule[1])
-				if err := json.Unmarshal([]byte(ruleV), &ruleValues); err != nil {
-					// todo: убрать панику
-					panic(err)
-				}
-
-				if ok := validator.In(ruleValues, value); !ok {
-					errorsAccumulator = append(errorsAccumulator, ValidationError{
-						Field: fieldName,
-						Err:   fmt.Errorf("%w. Rule values: %d. Struct value: %d", ErrValidationIn, ruleValues, value),
-					})
-				}
-			}
+			errorsAccumulator = append(errorsAccumulator, validateValueInt(rule, fieldValue, fieldName)...)
 		case reflect.String:
-			validator := StringValidator{}
-			value := fieldValue.String()
-
-			switch ruleName {
-			case "len":
-				ruleValue, _ := strconv.Atoi(rule[1])
-				if ok := validator.Len(ruleValue, value); !ok {
-					errorsAccumulator = append(errorsAccumulator, ValidationError{
-						Field: fieldName,
-						Err:   fmt.Errorf("%w. Rule value: %d. Struct value: %s", ErrValidationLen, ruleValue, value),
-					})
-				}
-			case "in":
-				ruleValues := strings.Split(rule[1], ",")
-
-				if ok := validator.In(ruleValues, value); !ok {
-					errorsAccumulator = append(errorsAccumulator, ValidationError{
-						Field: fieldName,
-						Err:   fmt.Errorf("%w. Rule values: %s. Struct value: %s", ErrValidationIn, rule[1], value),
-					})
-				}
-			case "regexp":
-				ok, err := validator.Regexp(rule[1], value)
-				if err != nil {
-					errorsAccumulator = append(errorsAccumulator, ValidationError{
-						Field: fieldName,
-						Err:   err,
-					})
-				} else if !ok {
-					errorsAccumulator = append(errorsAccumulator, ValidationError{
-						Field: fieldName,
-						Err:   fmt.Errorf("%w. Rule value: %s. Struct value: %s", ErrValidationRegexp, rule[1], value),
-					})
-				}
-			}
+			errorsAccumulator = append(errorsAccumulator, validateValueString(rule, fieldValue, fieldName)...)
 		}
 	}
 
 	return errorsAccumulator
 }
 
-type IValidationInt interface {
-	Max(max int, value int) bool
-	Min(min int, value int) bool
-	In(values []int, value int) bool
+func validateValueString(rule []string, fieldValue reflect.Value, fieldName string) ValidationErrors {
+	errorsAccumulator := ValidationErrors{}
+	ruleName := rule[0]
+	ruleValue := rule[1]
+
+	validator := StringValidator{}
+	value := fieldValue.String()
+
+	switch ruleName {
+	case "len":
+		ruleValue, _ := strconv.Atoi(ruleValue)
+		if ok := validator.Len(ruleValue, value); !ok {
+			errorsAccumulator = append(errorsAccumulator, ValidationError{
+				Field: fieldName,
+				Err:   fmt.Errorf("%w. Rule value: %d. Struct value: %s", ErrValidationLen, ruleValue, value),
+			})
+		}
+	case "in":
+		ruleValues := strings.Split(ruleValue, ",")
+
+		if ok := validator.In(ruleValues, value); !ok {
+			errorsAccumulator = append(errorsAccumulator, ValidationError{
+				Field: fieldName,
+				Err:   fmt.Errorf("%w. Rule values: %s. Struct value: %s", ErrValidationIn, ruleValue, value),
+			})
+		}
+	case "regexp":
+		ok, err := validator.Regexp(ruleValue, value)
+		if err != nil {
+			errorsAccumulator = append(errorsAccumulator, ValidationError{
+				Field: fieldName,
+				Err:   err,
+			})
+		} else if !ok {
+			errorsAccumulator = append(errorsAccumulator, ValidationError{
+				Field: fieldName,
+				Err:   fmt.Errorf("%w. Rule value: %s. Struct value: %s", ErrValidationRegexp, ruleValue, value),
+			})
+		}
+	}
+
+	return errorsAccumulator
 }
 
-type IValidationString interface {
-	Len(len int, value string) bool
-	Regexp(pattern string, value string) (bool, error)
-	In(values []string, value string) bool
-}
+func validateValueInt(rule []string, fieldValue reflect.Value, fieldName string) ValidationErrors {
+	errorsAccumulator := ValidationErrors{}
+	ruleName := rule[0]
+	ruleValue := rule[1]
 
-// -------------------
-// fmt.Println(reflect.TypeOf(fieldT))
-// fmt.Println(rv.Type())
-// fmt.Println("NAME:", fieldT.Name)
-// fmt.Println(fieldT.Type)
-// fmt.Println(fieldV.Kind())
-// fmt.Println(fieldT.Name)
-// fmt.Println("---------")
-//
-// if fieldT.Type.String() == "[]string" {
-//	fmt.Println("max, slice")
-// }
-// if rt.Field(i).Name == "Phones" && rv.Field(i).Kind() == reflect {
-//	fmt.Println("Yeeees")
-// }
-// -------------------
+	validator := IntValidator{}
+	value := int(fieldValue.Int())
+
+	switch ruleName {
+	case "min":
+		ruleValue, _ := strconv.Atoi(ruleValue)
+		if ok := validator.Min(ruleValue, value); !ok {
+			errorsAccumulator = append(errorsAccumulator, ValidationError{
+				Field: fieldName,
+				Err:   fmt.Errorf("%w. Rule value: %d. Struct value: %d", ErrValidationMin, ruleValue, value),
+			})
+		}
+	case "max":
+		ruleValue, _ := strconv.Atoi(ruleValue)
+		if ok := validator.Max(ruleValue, value); !ok {
+			errorsAccumulator = append(errorsAccumulator, ValidationError{
+				Field: fieldName,
+				Err:   fmt.Errorf("%w. Rule value: %d. Struct value: %d", ErrValidationMax, ruleValue, value),
+			})
+		}
+	case "in":
+		var ruleValues []int
+		formatted := fmt.Sprintf("[%s]", ruleValue)
+		if err := json.Unmarshal([]byte(formatted), &ruleValues); err != nil {
+			errorsAccumulator = append(errorsAccumulator, ValidationError{
+				Field: fieldName,
+				Err:   err,
+			})
+		}
+
+		if ok := validator.In(ruleValues, value); !ok {
+			errorsAccumulator = append(errorsAccumulator, ValidationError{
+				Field: fieldName,
+				Err:   fmt.Errorf("%w. Rule values: %s. Struct value: %d", ErrValidationIn, ruleValue, value),
+			})
+		}
+	}
+
+	return errorsAccumulator
+}

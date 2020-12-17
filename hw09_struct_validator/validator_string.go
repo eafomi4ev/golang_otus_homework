@@ -1,4 +1,4 @@
-package hw09_struct_validator
+package hw09_struct_validator //nolint:golint,stylecheck
 
 import (
 	"fmt"
@@ -10,7 +10,7 @@ type StringValidator struct{}
 func (validator StringValidator) Regexp(pattern string, value string) (bool, error) {
 	ok, err := regexp.MatchString(pattern, value)
 	if err != nil {
-		return false, fmt.Errorf("%w, because of %v", ErrValidationRegexp, err)
+		return false, fmt.Errorf("error occurred: %w", err)
 	}
 
 	return ok, nil

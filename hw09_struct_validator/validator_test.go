@@ -26,13 +26,6 @@ type (
 		Version string `validate:"len:5"`
 	}
 
-	Buyer struct {
-		Age     int   `validate:"min:18|max:50"`
-		Bonus   []int `validate:"in:25,33"`
-		Name    string
-		Address string
-	}
-
 	Token struct {
 		Header    []byte
 		Payload   []byte
@@ -81,23 +74,6 @@ func TestValidate(t *testing.T) {
 		},
 		{
 			User{
-				ID:     "12345678-12345678-12345678-123456789",
-				Name:   "John",
-				Age:    34,
-				Email:  "test",
-				Role:   "admin",
-				Phones: []string{"89994442233", "89994442299"},
-				meta:   nil,
-			},
-			ValidationErrors{
-				ValidationError{
-					Field: "Email",
-					Err:   fmt.Errorf("%w. Rule value: %s. Struct value: %s", ErrValidationRegexp, "^\\w+@\\w+\\.\\w+$", "test"),
-				},
-			},
-		},
-		{
-			User{
 				ID:     "",
 				Name:   "John",
 				Age:    34,
@@ -114,6 +90,46 @@ func TestValidate(t *testing.T) {
 				ValidationError{
 					Field: "Phones",
 					Err:   fmt.Errorf("%w. Rule value: %d. Struct value: %s", ErrValidationLen, 11, "8999444223310"),
+				},
+			},
+		},
+		{
+			App{Version: "1.0.0"},
+			nil,
+		},
+		{
+			App{Version: "1.0.0."},
+			ValidationErrors{
+				ValidationError{
+					Field: "Version",
+					Err:   fmt.Errorf("%w. Rule value: %d. Struct value: %s", ErrValidationLen, 5, "1.0.0."),
+				},
+			},
+		},
+		{
+			Token{
+				Header:    []byte{0, 0, 0, 50},
+				Payload:   []byte{0, 0, 0, 40},
+				Signature: []byte{1, 0, 0, 30},
+			},
+			nil,
+		},
+		{
+			Response{
+				Code: 200,
+				Body: "Hello",
+			},
+			nil,
+		},
+		{
+			Response{
+				Code: 418,
+				Body: "Ooops",
+			},
+			ValidationErrors{
+				ValidationError{
+					Field: "Code",
+					Err:   fmt.Errorf("%w. Rule values: %s. Struct value: %s", ErrValidationIn, "200,404,500", "418"),
 				},
 			},
 		},
