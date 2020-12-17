@@ -32,12 +32,35 @@ func Validate(v interface{}) error {
 
 	errorsAccumulator := ValidationErrors{}
 
+	if rt.Kind() != reflect.Struct {
+		return fmt.Errorf("passed argument is not a structure")
+	}
+
 	for i := 0; i < rt.NumField(); i++ {
-		field := rt.Field(i)
+		fieldT := rt.Field(i)
+		//fieldV := rv.Field(i)
 
-		fmt.Println(reflect.TypeOf(field))
+		// -------------------
+		//fmt.Println(reflect.TypeOf(fieldT))
+		//fmt.Println(rv.Type())
 
-		tagValue := field.Tag.Get("validate")
+		//fmt.Println("NAME:", fieldT.Name)
+		//fmt.Println(fieldT.Type)
+		//fmt.Println(fieldV.Kind())
+		//fmt.Println(fieldT.Name)
+		//fmt.Println("---------")
+		//
+		//if fieldT.Type.String() == "[]string" {
+		//	fmt.Println("max, slice")
+		//}
+
+		//if rt.Field(i).Name == "Phones" && rv.Field(i).Kind() == reflect {
+		//	fmt.Println("Yeeees")
+		//}
+
+		// -------------------
+
+		tagValue := fieldT.Tag.Get("validate")
 
 		if len(tagValue) == 0 {
 			continue
@@ -52,13 +75,18 @@ func Validate(v interface{}) error {
 
 			switch ruleName {
 			case "max":
-
+				switch fieldT.Type.String() {
+				case "[]string":
+					fmt.Println("Обработка слайса стрингов")
+				case "[]int":
+					fmt.Println("Обработка слайса интов")
+				}
 				limit, _ := strconv.Atoi(tmp[1])
 				val := rv.Field(i).Int()
 				err := ValidateMax(int64(limit), val)
 				if err != nil {
 					errorsAccumulator = append(errorsAccumulator, ValidationError{
-						Field: field.Name,
+						Field: fieldT.Name,
 						Err:   err,
 					})
 				}
@@ -68,7 +96,7 @@ func Validate(v interface{}) error {
 				err := ValidateMin(int64(limit), val)
 				if err != nil {
 					errorsAccumulator = append(errorsAccumulator, ValidationError{
-						Field: field.Name,
+						Field: fieldT.Name,
 						Err:   err,
 					})
 				}
@@ -81,7 +109,7 @@ func Validate(v interface{}) error {
 			if validationErrors != nil {
 				for _, errItem := range validationErrors {
 					errorsAccumulator = append(errorsAccumulator, ValidationError{
-						Field: field.Name,
+						Field: fieldT.Name,
 						Err:   errItem,
 					})
 				}
