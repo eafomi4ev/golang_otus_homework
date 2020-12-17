@@ -25,16 +25,15 @@ func readFirstLineFromFile(filePath string) (string, error) {
 	if err != nil {
 		return "", errors.Wrap(err, "")
 	}
-	defer f.Close()
 
 	scanner := bufio.NewScanner(f)
 	scanner.Scan()
 	firstLine := scanner.Text()
 
-	if err := scanner.Err(); err != nil {
+	if err := f.Close(); err != nil {
 		return "", errors.Wrap(err, "")
 	}
-	if err := f.Close(); err != nil {
+	if err := scanner.Err(); err != nil {
 		return "", errors.Wrap(err, "")
 	}
 
