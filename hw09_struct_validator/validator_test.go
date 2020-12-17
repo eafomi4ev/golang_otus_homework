@@ -28,6 +28,7 @@ type (
 
 	Buyer struct {
 		Age     int    `validate:"min:18|max:50"`
+		Bonus   int    `validate:"max:25"`
 		Name    string `validate:"len:5"`
 		Address string
 	}
@@ -51,9 +52,9 @@ func TestValidate(t *testing.T) {
 	}{
 		{
 			User{
-				//ID:     "12345678-12345678-12345678-123456789",
-				//Name:   "John",
-				//Age:    34,
+				ID:   "12345678-12345678-12345678-123456789",
+				Name: "John",
+				Age:  34,
 				//Email:  "test@test.m",
 				//Role:   "admin",
 				Phones: []string{"899944422331"},
@@ -63,6 +64,10 @@ func TestValidate(t *testing.T) {
 		},
 		{
 			Buyer{Name: "Bobby", Age: 20, Address: "NY"},
+			nil,
+		},
+		{
+			Buyer{Name: "Bobby", Age: 20, Bonus: 30},
 			nil,
 		},
 		{
