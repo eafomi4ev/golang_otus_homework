@@ -27,9 +27,9 @@ type (
 	}
 
 	Buyer struct {
-		Age     int    `validate:"min:18|max:50"`
-		Bonus   int    `validate:"max:25"`
-		Name    string `validate:"len:5"`
+		Age     int   `validate:"min:18|max:50"`
+		Bonus   []int `validate:"in:25,33"`
+		Name    string
 		Address string
 	}
 
@@ -52,43 +52,68 @@ func TestValidate(t *testing.T) {
 	}{
 		{
 			User{
-				ID:   "12345678-12345678-12345678-123456789",
-				Name: "John",
-				Age:  34,
-				//Email:  "test@test.m",
-				//Role:   "admin",
-				Phones: []string{"899944422331"},
-				//meta:   nil,
+				ID:     "12345678-12345678-12345678-123456789",
+				Name:   "John",
+				Age:    34,
+				Email:  "test@test.m",
+				Role:   "admin",
+				Phones: []string{"89994442233"},
+				meta:   nil,
 			},
 			nil,
 		},
 		{
-			Buyer{Name: "Bobby", Age: 20, Address: "NY"},
-			nil,
-		},
-		{
-			Buyer{Name: "Bobby", Age: 20, Bonus: 30},
-			nil,
-		},
-		{
-			Buyer{Name: "Bobby", Age: 60, Address: "NY"},
+			User{
+				ID:     "12345678-12345678-12345678-123456789",
+				Name:   "Ann",
+				Age:    25,
+				Email:  "ann-WRONG_EMAIL",
+				Role:   "admin",
+				Phones: []string{"89994442233"},
+				meta:   nil,
+			},
 			ValidationErrors{
 				ValidationError{
-					Field: "Age",
-					Err:   fmt.Errorf("%w: value=%d is bigger than max=%d", ErrMaxValidation, 60, 50),
+					Field: "Email",
+					Err:   fmt.Errorf("%w. Rule value: %s. Struct value: %s", ErrValidationRegexp, "^\\w+@\\w+\\.\\w+$", "ann-WRONG_EMAIL"),
 				},
 			},
 		},
 		{
-			Buyer{Name: "Ann", Age: 60, Address: "Mexico"},
+			User{
+				ID:     "12345678-12345678-12345678-123456789",
+				Name:   "John",
+				Age:    34,
+				Email:  "test",
+				Role:   "admin",
+				Phones: []string{"89994442233", "89994442299"},
+				meta:   nil,
+			},
 			ValidationErrors{
 				ValidationError{
-					Field: "Age",
-					Err:   fmt.Errorf("%w: value=%d is bigger than max=%d", ErrMaxValidation, 60, 50),
+					Field: "Email",
+					Err:   fmt.Errorf("%w. Rule value: %s. Struct value: %s", ErrValidationRegexp, "^\\w+@\\w+\\.\\w+$", "test"),
+				},
+			},
+		},
+		{
+			User{
+				ID:     "",
+				Name:   "John",
+				Age:    34,
+				Email:  "test@adm.ew",
+				Role:   "admin",
+				Phones: []string{"89994442233", "8999444223310"},
+				meta:   nil,
+			},
+			ValidationErrors{
+				ValidationError{
+					Field: "ID",
+					Err:   fmt.Errorf("%w. Rule value: %d. Struct value: %s", ErrValidationLen, 36, ""),
 				},
 				ValidationError{
-					Field: "Name",
-					Err:   fmt.Errorf("%w: the length of field's value=%d is not equal to len=%d", ErrLengthValidation, 3, 5),
+					Field: "Phones",
+					Err:   fmt.Errorf("%w. Rule value: %d. Struct value: %s", ErrValidationLen, 11, "8999444223310"),
 				},
 			},
 		},
