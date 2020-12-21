@@ -36,4 +36,11 @@ func TestGetDomainStat(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, DomainStat{}, result)
 	})
+
+	t.Run("incorrect json", func(t *testing.T) {
+		result, err := GetDomainStat(bytes.NewBufferString("some code"), "gov")
+		require.Error(t, err)
+		var expected DomainStat
+		require.Equal(t, expected, result)
+	})
 }
