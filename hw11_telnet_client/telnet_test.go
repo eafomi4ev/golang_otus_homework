@@ -2,6 +2,8 @@ package main
 
 import (
 	"bytes"
+	"fmt"
+	"io"
 	"io/ioutil"
 	"net"
 	"sync"
@@ -12,6 +14,51 @@ import (
 )
 
 func TestTelnetClient(t *testing.T) {
+	t.Run("creating new client returns correct instance", func(t *testing.T) {
+		var in io.ReadCloser
+		var out io.Writer
+		address := "otus.ru:80"
+		timeout := time.Duration(42)
+		var conn net.Conn
+
+		expectedClient := &Client{
+			address: address,
+			timeout: timeout,
+			in:      in,
+			out:     out,
+			conn:    conn,
+		}
+		client := NewTelnetClient(address, timeout, in, out)
+
+		require.Equal(t, expectedClient, client)
+	})
+
+	t.Run("return error if connection failed", func(t *testing.T) {
+		var in io.ReadCloser
+		var out io.Writer
+		address := "otus.ru"
+		timeout := time.Duration(42)
+
+		client := NewTelnetClient(address, timeout, in, out)
+		err := client.Connect()
+
+		fmt.Println(err)
+		require.Equal(t, "connection error: dial tcp: address otus.ru: missing port in address", err.Error())
+	})
+
+	t.Run("return error if connection failed", func(t *testing.T) {
+		var in io.ReadCloser
+		var out io.Writer
+		address := "otus.ru:80"
+		timeout := time.Duration(42)
+
+		client := NewTelnetClient(address, timeout, in, out)
+		err := client.Connect()
+
+		fmt.Println(err)
+		require.Equal(t, "connection error: dial tcp: i/o timeout", err.Error())
+	})
+
 	t.Run("basic", func(t *testing.T) {
 		l, err := net.Listen("tcp", "127.0.0.1:")
 		require.NoError(t, err)
