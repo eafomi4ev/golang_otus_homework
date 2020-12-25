@@ -16,6 +16,8 @@ func TestGetDomainStat(t *testing.T) {
 {"Id":4,"Name":"Gregory Reid","Username":"tButler","Email":"5Moore@Teklist.net","Phone":"520-04-16","Password":"r639qLNu","Address":"Sunfield Park 20"}
 {"Id":5,"Name":"Janice Rose","Username":"KeithHart","Email":"nulla@Linktype.com","Phone":"146-91-01","Password":"acSBF5","Address":"Russell Trail 61"}`
 
+	incorrectEmailData := `{"Id":5,"Name":"Janice Rose","Username":"KeithHart","Email":"nullaLinktype.com","Phone":"146-91-01","Password":"acSBF5","Address":"Russell Trail 61"}`
+
 	t.Run("find 'com'", func(t *testing.T) {
 		result, err := GetDomainStat(bytes.NewBufferString(data), "com")
 		require.NoError(t, err)
@@ -42,5 +44,11 @@ func TestGetDomainStat(t *testing.T) {
 		require.Error(t, err)
 		var expected DomainStat
 		require.Equal(t, expected, result)
+	})
+
+	t.Run("incorrect email", func(t *testing.T) {
+		result, err := GetDomainStat(bytes.NewBufferString(incorrectEmailData), "com")
+		require.Nil(t, result)
+		require.EqualError(t, err, "get users error: parsing email error: incorrect email format")
 	})
 }

@@ -21,48 +21,52 @@ type User struct {
 type DomainStat map[string]int
 
 func GetDomainStat(r io.Reader, domain string) (DomainStat, error) {
-	u, err := getUsers(r)
+	stat, err := calculateStat(r, domain)
 	if err != nil {
 		return nil, fmt.Errorf("get users error: %w", err)
 	}
-	return countDomains(u, domain)
+	return stat, nil
 }
 
-type users [100_000]User
-
-func getUsers(r io.Reader) (result users, err error) {
+func calculateStat(r io.Reader, domain string) (result DomainStat, err error) {
 	reader := bufio.NewReader(r)
 
-	var i int
 	var line []byte
+	dotDomain := "." + domain
+	result = make(DomainStat)
 	for {
 		var user User
 
 		line, _, err = reader.ReadLine()
-		if errors.Is(err, io.EOF) {
-			return result, nil
-		}
 		if err != nil {
-			return result, fmt.Errorf("error while reading: %w", err)
+			if errors.Is(err, io.EOF) {
+				return result, nil
+			}
+
+			return nil, fmt.Errorf("error while reading: %w", err)
 		}
 
 		if err = user.UnmarshalJSON(line); err != nil {
-			return
+			return nil, fmt.Errorf("unmarshal json error: %w", err)
 		}
-		result[i] = user
-		i++
+
+		emailDomain, err := getEmailDomain(user.Email)
+		if err != nil {
+			return nil, fmt.Errorf("parsing email error: %w", err)
+		}
+		ok := strings.HasSuffix(emailDomain, dotDomain)
+		if ok {
+			result[emailDomain]++
+		}
 	}
 }
 
-func countDomains(u users, domain string) (DomainStat, error) {
-	result := make(DomainStat)
-
-	s := "." + domain
-	for _, user := range u {
-		ok := strings.HasSuffix(user.Email, s)
-		if ok {
-			result[strings.ToLower(strings.SplitN(user.Email, "@", 2)[1])]++
-		}
+func getEmailDomain(email string) (string, error) {
+	parts := strings.SplitN(email, "@", 2)
+	if len(parts) < 2 {
+		return "", fmt.Errorf("incorrect email format")
 	}
-	return result, nil
+	emailDomain := strings.ToLower(parts[1])
+
+	return emailDomain, nil
 }
