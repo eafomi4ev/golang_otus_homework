@@ -2,28 +2,58 @@ package app
 
 import (
 	"context"
+	"fmt"
+	"time"
+
+	"github.com/eafomi4ev/golang_otus_homework/hw12_13_14_15_calendar/internal/storage"
+	"github.com/eafomi4ev/golang_otus_homework/hw12_13_14_15_calendar/internal/utils/idgen"
 )
 
 type App struct {
-	// TODO
+	Logger  Logger
+	Storage Storage
 }
 
 type Logger interface {
-	// TODO
+	Info(msg string)
+	Warn(msg string)
+	Error(msg string)
 }
 
 type Storage interface {
-	// TODO
+	Add(ctx context.Context, e storage.Event) error
+	Update(ctx context.Context, e storage.Event) error
+	Delete(ctx context.Context, id string) error
+	ListPerDay(ctx context.Context, t time.Time) ([]storage.Event, error)
+	ListPerWeek(ctx context.Context, day time.Time) ([]storage.Event, error)
+	ListPerMonth(ctx context.Context, day time.Time) ([]storage.Event, error)
 }
 
 func New(logger Logger, storage Storage) *App {
-	return &App{}
+	return &App{
+		Logger:  logger,
+		Storage: storage,
+	}
 }
 
-func (a *App) CreateEvent(ctx context.Context, id string, title string) error {
-	// TODO
-	return nil
-	// return a.storage.CreateEvent(storage.Event{ID: id, Title: title})
-}
+func (a *App) CreateEvent(ctx context.Context, title string) error {
+	id, err := idgen.PrefixedID("EV")
+	if err != nil {
+		return fmt.Errorf("cannot create event: %w", err)
+	}
 
-// TODO
+	userID, err := idgen.PrefixedID("USR")
+	if err != nil {
+		return fmt.Errorf("cannot create user id: %w", err)
+	}
+
+	return a.Storage.Add(ctx, storage.Event{
+		ID:          id,
+		Title:       title,
+		EventDate:   time.Time{},
+		Duration:    0,
+		Description: "",
+		UserID:      userID,
+		RemindIn:    0,
+	})
+}
