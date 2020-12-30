@@ -13,11 +13,11 @@ import (
 )
 
 var (
-	timeout string
+	timeout time.Duration
 )
 
 func init() {
-	pflag.StringVar(&timeout, "timeout", "", "timeout")
+	pflag.DurationVar(&timeout, "timeout", 10*time.Second, "timeout")
 	pflag.Parse()
 }
 
@@ -30,15 +30,9 @@ func main() {
 	port := pflag.Arg(1)
 	address := net.JoinHostPort(host, port)
 
-	timeoutD, err := time.ParseDuration(timeout)
-	if err != nil {
-		log.Fatal("Incorrect timeout value")
-	}
+	telnet := NewTelnetClient(address, timeout, os.Stdin, os.Stdout)
 
-	telnet := NewTelnetClient(address, timeoutD, os.Stdin, os.Stdout)
-
-	err = telnet.Connect()
-	if err != nil {
+	if err := telnet.Connect(); err != nil {
 		log.Fatal(err)
 	}
 	defer telnet.Close()
@@ -49,7 +43,7 @@ func main() {
 
 		err := telnet.Send()
 		if err != nil {
-			fmt.Println(err)
+			fmt.Fprintln(os.Stderr, err)
 		}
 	}()
 
@@ -58,7 +52,7 @@ func main() {
 
 		err := telnet.Receive()
 		if err != nil {
-			fmt.Println(err)
+			fmt.Fprintln(os.Stderr, err)
 		}
 	}()
 
@@ -68,5 +62,6 @@ func main() {
 	select {
 	case <-sigCh:
 	case <-ctx.Done():
+		close(sigCh)
 	}
 }
