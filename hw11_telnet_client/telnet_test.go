@@ -2,8 +2,11 @@ package main
 
 import (
 	"bytes"
+	"fmt"
+	"io"
 	"io/ioutil"
 	"net"
+	"os"
 	"sync"
 	"testing"
 	"time"
@@ -12,6 +15,51 @@ import (
 )
 
 func TestTelnetClient(t *testing.T) {
+	t.Run("creating new client returns correct instance", func(t *testing.T) {
+		var in io.ReadCloser
+		var out io.Writer
+		address := "otus.ru:80"
+		timeout := time.Duration(42)
+		var conn net.Conn
+
+		expectedClient := &Client{
+			address: address,
+			timeout: timeout,
+			in:      in,
+			out:     out,
+			conn:    conn,
+		}
+		client := NewTelnetClient(address, timeout, in, out)
+
+		require.Equal(t, expectedClient, client)
+	})
+
+	t.Run("return error if connection failed", func(t *testing.T) {
+		var in io.ReadCloser
+		var out io.Writer
+		address := "otus.ru"
+		timeout := time.Duration(42)
+
+		client := NewTelnetClient(address, timeout, in, out)
+		err := client.Connect()
+
+		fmt.Println(err)
+		require.Equal(t, "connection error: dial tcp: address otus.ru: missing port in address", err.Error())
+	})
+
+	t.Run("return error if connection failed", func(t *testing.T) {
+		var in io.ReadCloser
+		var out io.Writer
+		address := "otus.ru:80"
+		timeout := time.Duration(42)
+
+		client := NewTelnetClient(address, timeout, in, out)
+		err := client.Connect()
+
+		fmt.Println(err)
+		require.Equal(t, "connection error: dial tcp: i/o timeout", err.Error())
+	})
+
 	t.Run("basic", func(t *testing.T) {
 		l, err := net.Listen("tcp", "127.0.0.1:")
 		require.NoError(t, err)
@@ -58,6 +106,63 @@ func TestTelnetClient(t *testing.T) {
 			n, err = conn.Write([]byte("world\n"))
 			require.NoError(t, err)
 			require.NotEqual(t, 0, n)
+		}()
+
+		wg.Wait()
+	})
+
+	t.Run("EOF", func(t *testing.T) {
+		origStderr := os.Stderr
+		defer func() {
+			os.Stderr = origStderr
+		}()
+
+		r, w, err := os.Pipe()
+		os.Stderr = w
+		l, err := net.Listen("tcp", "127.0.0.1:")
+		require.NoError(t, err)
+		defer func() { require.NoError(t, l.Close()) }()
+
+		var wg sync.WaitGroup
+		wg.Add(2)
+
+		go func() {
+			defer wg.Done()
+
+			out := &bytes.Buffer{}
+
+			pr, pw := io.Pipe()
+
+			timeout, err := time.ParseDuration("1s")
+			require.NoError(t, err)
+
+			client := NewTelnetClient(l.Addr().String(), timeout, pr, out)
+			require.NoError(t, client.Connect())
+			defer func() { require.NoError(t, client.Close()) }()
+
+			err = pw.Close()
+			require.NoError(t, err)
+
+			err = client.Send()
+			require.NoError(t, err)
+
+			err = client.Receive()
+			require.NoError(t, err)
+
+			buf := make([]byte, 1024)
+			n, _ := r.Read(buf)
+			require.Contains(t, string(buf[:n]), "...EOF")
+		}()
+
+		go func() {
+			defer wg.Done()
+
+			conn, err := l.Accept()
+			require.NoError(t, err)
+			require.NotNil(t, conn)
+			defer func() {
+				require.NoError(t, conn.Close())
+			}()
 		}()
 
 		wg.Wait()
