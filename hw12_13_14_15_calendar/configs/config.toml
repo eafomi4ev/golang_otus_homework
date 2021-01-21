@@ -1,5 +1,19 @@
+[storage]
+type = "inmemory" # inmemory, postgres
+
+[storage.postgres]
+host = "localhost"
+port = "5432"
+user = "postgres"
+password = "postgres"
+dbname = "calendar"
+sslmode = "disable"
+# dsn = "host=localhost port=5432 user=anthony password=anthony dbname=books sslmode=disable"
+
 [logger]
 level = "INFO"
+path = "./logs/service.log"
 
-# TODO
-# ...
+[service]
+host = "localhost"
+port = "7777"
