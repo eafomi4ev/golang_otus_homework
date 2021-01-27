@@ -1,7 +1,45 @@
 syntax = "proto3";
 
+// protoc ./api/EventService.proto --go_out=./internal/server/grpc/ --go-grpc_out=./internal/server/grpc/
+
 package event;
+option go_package = ".;internalgrpc";
+
+import "google/protobuf/timestamp.proto";
+//import "google/protobuf/duration.proto";
+import "google/protobuf/empty.proto";
 
 message Event {
-    // TODO
+  string id = 1;
+  string title = 2;
+  google.protobuf.Timestamp eventDate = 3;
+  int64 duration = 4;
+  string description = 5;
+  string userID = 6;
+  int64 remindIn = 7;
+}
+
+service Calendar {
+  rpc Add(Event) returns (Event);
+  rpc Update(Event) returns (Event);
+  rpc Delete(DeleteRequest) returns (google.protobuf.Empty);
+  rpc ListPerPeriod(ListRequest) returns (ListResponse);
+}
+
+message Error {
+  string text = 1;
+}
+
+message DeleteRequest {
+  string id = 1;
+}
+
+message ListRequest {
+  google.protobuf.Timestamp startDay = 1;
+  string periodName = 2;
+}
+
+message ListResponse {
+  repeated Event events = 1;
+  Error error = 2;
 }
