@@ -5,11 +5,11 @@ import (
 )
 
 type Event struct {
-	ID          string
-	Title       string
-	EventDate   time.Time
-	Duration    time.Duration
-	Description string
-	UserID      string
-	RemindIn    time.Duration
+	ID          string        `json:"id"`
+	Title       string        `json:"title"`
+	EventDate   time.Time     `json:"eventDate"`
+	Duration    time.Duration `json:"duration"`
+	Description string        `json:"description"`
+	UserID      string        `json:"userId"`
+	RemindIn    time.Duration `json:"remindIn"`
 }

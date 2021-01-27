@@ -5,13 +5,13 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"net"
 	"os"
 	"os/signal"
 	"time"
 
 	"github.com/eafomi4ev/golang_otus_homework/hw12_13_14_15_calendar/internal/app"
 	"github.com/eafomi4ev/golang_otus_homework/hw12_13_14_15_calendar/internal/logger"
+	internalgrpc "github.com/eafomi4ev/golang_otus_homework/hw12_13_14_15_calendar/internal/server/grpc"
 	internalhttp "github.com/eafomi4ev/golang_otus_homework/hw12_13_14_15_calendar/internal/server/http"
 	memorystorage "github.com/eafomi4ev/golang_otus_homework/hw12_13_14_15_calendar/internal/storage/memory"
 	sqlstorage "github.com/eafomi4ev/golang_otus_homework/hw12_13_14_15_calendar/internal/storage/sql"
@@ -34,7 +34,10 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	config := NewConfig(appConfigPath)
-	config.Validate()
+	configErrors := config.Validate()
+	if len(configErrors) != 0 {
+		log.Fatal(configErrors)
+	}
 
 	logg := logger.New(ctx, config.Logger.Level, config.Logger.Path)
 
@@ -43,9 +46,10 @@ func main() {
 		log.Fatal(fmt.Errorf("error occurred on attempt to crate storage: %w", err))
 	}
 
-	_ = app.New(logg, storage)
+	calendar := app.New(logg, storage)
 
-	server := internalhttp.New(config.Service.Host, config.Service.Port, logg)
+	server := internalhttp.NewServer(config.Service.Host, config.Service.Port, calendar, logg)
+	grpcServer := internalgrpc.NewServer(config.GRPCService.Host, config.GRPCService.Port, calendar, logg)
 
 	go func() {
 		signals := make(chan os.Signal, 1)
@@ -61,10 +65,13 @@ func main() {
 		if err := server.Stop(ctx); err != nil {
 			logg.Error("failed to stop http server: " + err.Error())
 		}
+		grpcServer.Stop()
 	}()
 
-	logg.Info(fmt.Sprintf("calendar is running on %s", net.JoinHostPort(config.Service.Host, config.Service.Port)))
-
+	if err := grpcServer.Start(ctx); err != nil {
+		logg.Error("failed to start grpc server: " + err.Error())
+		os.Exit(1)
+	}
 	if err := server.Start(ctx); err != nil {
 		logg.Error("failed to start http server: " + err.Error())
 		os.Exit(1)

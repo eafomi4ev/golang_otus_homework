@@ -13,6 +13,8 @@ var dateLayout = "[02/Jan/2006:15:04:05 -0700]"
 func loggingMiddleware(next http.Handler, logg app.Logger) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+
 		logg.Info(strings.Join( // todo: добавить логирование кода ответа
 			[]string{
 				r.RemoteAddr,

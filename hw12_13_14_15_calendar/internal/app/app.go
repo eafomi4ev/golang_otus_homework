@@ -21,8 +21,8 @@ type Logger interface {
 }
 
 type Storage interface {
-	Add(ctx context.Context, e storage.Event) error
-	Update(ctx context.Context, e storage.Event) error
+	Add(ctx context.Context, e storage.Event) (storage.Event, error)
+	Update(ctx context.Context, e storage.Event) (storage.Event, error)
 	Delete(ctx context.Context, id string) error
 	ListPerDay(ctx context.Context, t time.Time) ([]storage.Event, error)
 	ListPerWeek(ctx context.Context, day time.Time) ([]storage.Event, error)
@@ -36,18 +36,18 @@ func New(logger Logger, storage Storage) *App {
 	}
 }
 
-func (a *App) CreateEvent(ctx context.Context, title string) error {
+func (a *App) CreateEvent(ctx context.Context, title string) (*storage.Event, error) {
 	id, err := idgen.PrefixedID("EV")
 	if err != nil {
-		return fmt.Errorf("cannot create event: %w", err)
+		return nil, fmt.Errorf("cannot create event: %w", err)
 	}
 
 	userID, err := idgen.PrefixedID("USR")
 	if err != nil {
-		return fmt.Errorf("cannot create user id: %w", err)
+		return nil, fmt.Errorf("cannot create user id: %w", err)
 	}
 
-	return a.Storage.Add(ctx, storage.Event{
+	event := &storage.Event{
 		ID:          id,
 		Title:       title,
 		EventDate:   time.Time{},
@@ -55,5 +55,7 @@ func (a *App) CreateEvent(ctx context.Context, title string) error {
 		Description: "",
 		UserID:      userID,
 		RemindIn:    0,
-	})
+	}
+
+	return event, nil
 }

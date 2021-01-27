@@ -11,21 +11,25 @@ import (
 // Организация конфига в main принуждает нас сужать API компонентов, использовать
 // при их конструировании только необходимые параметры, а также уменьшает вероятность циклической зависимости.
 type Config struct {
-	Storage StorageConf
-	Logger  LoggerConf
-	Service ServiceConf
+	Storage     StorageConf
+	Logger      LoggerConf
+	Service     ServiceConf
+	GRPCService ServiceConf
 }
 
-func (c *Config) Validate() {
+func (c *Config) Validate() []error {
+	errors := make([]error, 0)
 	if c.Service.Host == "" {
-		log.Fatal("Host is not defined in the config file")
+		errors = append(errors, fmt.Errorf("host is not defined in the config file"))
 	}
-	if len(c.Service.Port) == 0 { // todo: проверять, что содержит только цифры
-		log.Fatal("Port is not defined in the config file")
+	if len(c.Service.Port) == 0 {
+		errors = append(errors, fmt.Errorf("port is not defined in the config file"))
 	}
 	if c.Storage.Type != "inmemory" && c.Storage.Type != "postgres" { // todo: вынести типы сторов в константу или enum
-		log.Fatal("Incorrect storage type")
+		errors = append(errors, fmt.Errorf("incorrect storage type"))
 	}
+
+	return errors
 }
 
 type LoggerConf struct {
