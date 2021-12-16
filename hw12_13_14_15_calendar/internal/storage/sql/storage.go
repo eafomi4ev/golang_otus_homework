@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/eafomi4ev/golang_otus_homework/hw12_13_14_15_calendar/internal/storage"
+	"github.com/eafomi4ev/golang_otus_homework/hw12_13_14_15_calendar/internal/utils/idgen"
 	_ "github.com/jackc/pgx/stdlib" // nolint: gci
 )
 
@@ -36,8 +37,10 @@ func (s *Storage) Close(ctx context.Context) error {
 	return s.db.Close()
 }
 
-func (s *Storage) Add(ctx context.Context, e storage.Event) error {
-	query := "INSERT INTO events (id, title, date, duration, description, user_id, remind_in) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id;"
+func (s *Storage) Add(ctx context.Context, e storage.Event) (storage.Event, error) {
+	query := "INSERT INTO events (id, title, event_date, duration, description, user_id, remind_in) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id;"
+
+	e.ID, _ = idgen.PrefixedID("EV")
 
 	_, err := s.db.ExecContext(
 		ctx,
@@ -45,19 +48,23 @@ func (s *Storage) Add(ctx context.Context, e storage.Event) error {
 		e.ID,
 		e.Title,
 		e.EventDate,
-		e.Duration,
+		int(e.Duration),
 		e.Description,
 		e.UserID,
-		e.RemindIn,
+		int(e.RemindIn),
 	)
 
-	return fmt.Errorf("error while adding event: %w", err)
+	if err != nil {
+		err = fmt.Errorf("error while adding event: %w", err)
+	}
+
+	return e, err
 }
 
-func (s *Storage) Update(ctx context.Context, e storage.Event) error {
+func (s *Storage) Update(ctx context.Context, e storage.Event) (storage.Event, error) {
 	query := `UPDATE events SET 
                   title=$1, 
-                  date=$2, 
+                  event_date=$2, 
                   duration=$3, 
                   description=$4, 
                   user_id=$5, 
@@ -76,19 +83,31 @@ func (s *Storage) Update(ctx context.Context, e storage.Event) error {
 		e.ID,
 	)
 
-	return fmt.Errorf("error while updating event: %w", err)
+	if err != nil {
+		err = fmt.Errorf("error while updating event: %w", err)
+	}
+
+	return e, err
 }
 
 func (s *Storage) Delete(ctx context.Context, id string) error {
-	query := `DELETE FROM event WHERE id=$1;`
+	query := `DELETE FROM events WHERE id=$1;`
 
-	_, err := s.db.ExecContext(
+	result, err := s.db.ExecContext(
 		ctx,
 		query,
 		id,
 	)
+	if err != nil {
+		err = fmt.Errorf("error while deleting event: %w", err)
+	} else {
+		ra, _ := result.RowsAffected()
+		if ra == 0 {
+			err = fmt.Errorf("error while deleting event: no row with such id")
+		}
+	}
 
-	return fmt.Errorf("error while deleting event: %w", err)
+	return err
 }
 
 func (s *Storage) ListPerDay(ctx context.Context, t time.Time) ([]storage.Event, error) {
@@ -134,7 +153,7 @@ func (s *Storage) ListPerMonth(ctx context.Context, t time.Time) ([]storage.Even
 }
 
 func (s *Storage) listPerPeriod(ctx context.Context, start time.Time, end time.Time) ([]storage.Event, error) {
-	query := `SELECT * WHERE event_date>=$1 and event_date<=$2;`
+	query := `SELECT * FROM events WHERE event_date>=$1 and event_date<=$2;`
 
 	rows, err := s.db.QueryContext(ctx, query, start, end)
 	if err != nil {

@@ -38,7 +38,7 @@ func TestStorage(t *testing.T) {
 
 		require.Len(t, s.events, 0)
 
-		err = s.Add(ctx, e)
+		e, err = s.Add(ctx, e)
 
 		require.NoError(t, err)
 		require.Len(t, s.events, 1)
@@ -67,12 +67,12 @@ func TestStorage(t *testing.T) {
 		require.Len(t, s.events, 0)
 
 		ctx := context.Background()
-		err = s.Add(ctx, e)
+		e, err = s.Add(ctx, e)
 		require.NoError(t, err)
 		require.Equal(t, s.events[e.ID].Title, "Test Event")
 
 		e.Title = "Updated Title event"
-		err = s.Update(ctx, e)
+		e, err = s.Update(ctx, e)
 		require.NoError(t, err)
 		require.Equal(t, s.events[e.ID].Title, "Updated Title event")
 	})
@@ -98,7 +98,7 @@ func TestStorage(t *testing.T) {
 		require.Len(t, s.events, 0)
 
 		ctx := context.Background()
-		err = s.Add(ctx, e)
+		e, err = s.Add(ctx, e)
 		require.NoError(t, err)
 		require.Len(t, s.events, 1)
 
@@ -140,9 +140,9 @@ func TestStorage(t *testing.T) {
 		require.Len(t, s.events, 0)
 
 		ctx := context.Background()
-		err = s.Add(ctx, e1)
+		e1, err = s.Add(ctx, e1)
 		require.NoError(t, err)
-		err = s.Add(ctx, e2)
+		e2, err = s.Add(ctx, e2)
 		require.NoError(t, err)
 
 		require.Len(t, s.events, 2)
@@ -190,9 +190,9 @@ func TestStorage(t *testing.T) {
 		require.Len(t, s.events, 0)
 
 		ctx := context.Background()
-		err = s.Add(ctx, e1)
+		e1, err = s.Add(ctx, e1)
 		require.NoError(t, err)
-		err = s.Add(ctx, e2)
+		e2, err = s.Add(ctx, e2)
 		require.NoError(t, err)
 
 		require.Len(t, s.events, 2)
@@ -239,9 +239,9 @@ func TestStorage(t *testing.T) {
 		require.Len(t, s.events, 0)
 
 		ctx := context.Background()
-		err = s.Add(ctx, e1)
+		e1, err = s.Add(ctx, e1)
 		require.NoError(t, err)
-		err = s.Add(ctx, e2)
+		e2, err = s.Add(ctx, e2)
 		require.NoError(t, err)
 
 		require.Len(t, s.events, 2)

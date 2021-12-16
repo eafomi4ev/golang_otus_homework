@@ -1,5 +1,5 @@
 [storage]
-type = "inmemory" # inmemory, postgres
+type = "postgres" # inmemory, postgres
 
 [storage.postgres]
 host = "localhost"
@@ -17,3 +17,7 @@ path = "./logs/service.log"
 [service]
 host = "localhost"
 port = "7777"
+
+[grpcservice]
+host = "localhost"
+port = "7778"
